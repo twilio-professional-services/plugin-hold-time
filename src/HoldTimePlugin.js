@@ -1,5 +1,4 @@
-import React from 'react';
-import { VERSION, Utils } from '@twilio/flex-ui';
+import { Utils } from '@twilio/flex-ui-core';
 import { FlexPlugin } from '@twilio/flex-plugin';
 
 
@@ -20,9 +19,9 @@ export default class HoldTimePlugin extends FlexPlugin {
    */
   init(flex, manager) {
     const getCustomerParticipant = (task) => {
-      const conferenceChildren = task?.conference?.source?.children || [];
+      const conferenceChildren = task?.conference?.participants || [];
 
-      const customerParticipant = conferenceChildren.find(p => p?.value?.participant_type === 'customer');
+      const customerParticipant = conferenceChildren.find(p => p?.participantType === 'customer');
 
       return customerParticipant;
     }
@@ -31,8 +30,8 @@ export default class HoldTimePlugin extends FlexPlugin {
       const task = payload?.data?.root?.task
       const customerParticipant = getCustomerParticipant(task);
 
-      const isCustomerOnHold = customerParticipant?.value?.hold;
-      const customerUpdatedTimestamp = customerParticipant?.dateUpdated;
+      const isCustomerOnHold = customerParticipant?.onHold;
+      const customerUpdatedTimestamp = customerParticipant?.mediaProperties.timestamp;
 
       let timeSinceTaskUpdated;
       if (task?.dateUpdated) {
@@ -40,8 +39,8 @@ export default class HoldTimePlugin extends FlexPlugin {
       }
 
       let timeSinceCustomerUpdated;
-      if (customerUpdatedTimestamp) {
-        timeSinceCustomerUpdated = Math.max(Date.now() - customerUpdatedTimestamp.getTime(), 0)
+      if (isCustomerOnHold && customerUpdatedTimestamp) {
+        timeSinceCustomerUpdated = Math.max(Date.now() - new Date(customerUpdatedTimestamp).getTime(), 0)
       }
 
       const value = isCustomerOnHold
