@@ -8,6 +8,8 @@ Twilio Flex Plugins allow you to customize the appearance and behavior of [Twili
 
 This plugin will display the hold time for when the agent puts the user on hold. The hold time would appear both on the agent view as well as the teams view.
 
+**For the Flex UI 1.x version of this plugin, see [the flex-ui-1 branch](https://github.com/twilio-professional-services/plugin-hold-time/tree/flex-ui-1).**
+
 Sample demo is provided below :
 
 ![Hold Time](./resources/holdTime.gif)
