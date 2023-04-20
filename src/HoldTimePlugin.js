@@ -31,7 +31,19 @@ export default class HoldTimePlugin extends FlexPlugin {
       const customerParticipant = getCustomerParticipant(task);
 
       const isCustomerOnHold = customerParticipant?.onHold;
-      const customerUpdatedTimestamp = customerParticipant?.mediaProperties.timestamp;
+      let customerUpdatedTimestamp = customerParticipant?.mediaProperties.timestamp;
+      
+      if (isCustomerOnHold && !customerUpdatedTimestamp) {
+        // mediaProperties.timestamp is undefined for supervisors. To work around this, the
+        // agent's HoldCall/HoldParticipant actions set a worker attribute with the timestamp
+        // of the hold. Here, we attempt to use that timestamp.
+        // TODO: Remove all of this if the mediaProperties.timestamp property begins populating for supervisors.
+        const { workers } = manager.store.getState().flex.supervisor;
+        
+        const worker = workers?.find((w) => w.worker?.sid === task?.workerSid);
+        
+        customerUpdatedTimestamp = worker?.worker?.attributes?.lastHoldStart;
+      }
 
       let timeSinceTaskUpdated;
       if (task?.dateUpdated) {
@@ -56,6 +68,28 @@ export default class HoldTimePlugin extends FlexPlugin {
     manager.strings.TaskHeaderGroupCallAccepted = "{{CustomTaskLineCallAssigned}} | {{{icon name='Participant'}}} {{task.conference.liveParticipantCount}}" ;
     manager.strings.TaskLineGroupCallAssigned = "{{CustomTaskLineCallAssigned}} | {{{icon name='Participant'}}} {{task.conference.liveParticipantCount}}";
     manager.strings.SupervisorTaskGroupCall = "{{CustomTaskLineCallAssigned}} | {{task.conference.liveParticipantCount}}";
+    
+    // The following section works around an issue with supervisors not being able
+    // to see hold time in the teams view. Supervisors don't receive the hold timestamp,
+    // so as a workaround, we set that here as a worker attribute, which the supervisor
+    // teams view will fetch.
+    // TODO: Remove all of this if the mediaProperties.timestamp property begins populating for supervisors.
+    const setHoldStart = () => {
+      flex.Actions.invokeAction("SetWorkerAttributes", {
+        mergeExisting: true,
+        attributes: {
+          lastHoldStart: Date.now()
+        }
+      });
+    }
+    
+    flex.Actions.addListener('beforeHoldCall', () => {
+      setHoldStart();
+    })
+    
+    flex.Actions.addListener('beforeHoldParticipant', () => {
+      setHoldStart();
+    })
   }
 
   /**
